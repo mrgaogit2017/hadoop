@@ -1,0 +1,156 @@
+1. 下载/apps/software
+wget http://mirror.bit.edu.cn/apache/zookeeper/zookeeper-3.5.5/apache-zookeeper-3.5.5.tar.gz
+
+2. 解压
+tar zxvf apache-zookeeper-3.5.5.tar.gz
+
+zk启动有问题查看日志zookeeper.out
+https://blog.csdn.net/weixin_38201936/article/details/88821559
+https://www.cnblogs.com/raphael5200/p/5285380.html
+
+
+下载Hadoop 2.7.7
+http://mirror.bit.edu.cn/apache/hadoop/common/hadoop-2.7.7/hadoop-2.7.7.tar.gz
+安装步骤:
+实践安照下面这个进行的
+https://www.cnblogs.com/zhanglianghhh/p/9252152.html
+
+但是下面这个貌似更好一些, 可以避免下面的一些坑
+https://www.cnblogs.com/biehongli/p/7660310.html
+
+
+除第一次启动外:
+======>启动:
+  先启动HDFS
+  start-dfs.sh  
+  启动成功后可以登陆web客户端查看hdfs：http://mini1:50070
+  再启动YARN
+  start-yarn.sh
+  启动成功后可以登陆web客户端查看yarn：http://mini1:8088
+  也可以使用jps查看进程如下：
+        27408 NameNode
+        27643 SecondaryNameNode
+        27512 DataNode
+        27803 ResourceManager
+        28066 NodeManager
+        28218 Jps
+		
+======>关闭:(也可以用./stop-all.sh 除了RM不能关闭外都可以自动关闭, 在另外一个节点重新执行一下就好)
+stop-dfs.sh
+  stop-yarn.sh
+  使用jps查看进程，以上进程都已关闭。
+
+  
+  NameNode进程起不来
+  https://www.cnblogs.com/dongxiucai/archive/2018/09/12/9636177.html
+  
+  解决方式:
+   1. 格式化:----------->慎重啊, 存储的文件都会被格式化
+  bin/hdfs namenode -format
+   2.单独启动NN:
+  /hadoop-daemon.sh start namenode
+  
+  单独启动RM(resourcemanager):yarn-daemon.sh start resourcemanager  # 也可用start-yarn.sh
+  
+  
+ 格式化namenode后, datanode起不来:
+ https://blog.csdn.net/oschina_41140683/article/details/80332080
+ 
+ 集群ID统一(nn-dn)
+  
+  
+  
+坑1:
+互相免密登录ssh(包括自己本机也copy-id一下)
+
+坑2:
+安装完后, 启动FDFS报错:Error:JAVA_HOME is not set and could not be found 解决般的法
+针对这个错误，网上好多都说了java的路径设置有问题，但没有指出具体的修改方法，其实是hadoop里面hadoop-env.sh文件里面的java路径设置不对，hadoop-env.sh在hadoop/etc/hadoop目录下，具体的修改办法如下：
+sudo vim hadoop/etc/hadoop/hdoop-env.sh
+将语句      export JAVA_HOME=$JAVA_HOME
+修改为      export JAVA_HOME=/usr/local/java/jdk1.8.0_211
+保存后退出。
+
+
+坑3:
+./start-yarn.sh
+报错:
+Are you sure you want to continue connecting (yes/no)? 
+The authenticity of host 'mini06 (172.16.11.206)' can't be established.
+
+解决方案:
+1. 先确定ssh能不能通. ssh 172.16.11.206 date
+如果不通, 先ssh-copy-id给它
+
+2. 修改文件vim /etc/ssh/ssh_config 将 #StrictHostKeyChecking ask 改为 StrictHostKeyChecking no
+    重启服务: service sshd restart
+
+
+安装完毕,访问:http://172.16.11.207:50070
+(172.16.11.207为ResourceManager节点)
+
+测试:
+1. 查看dn节点current节点/tmp/hadooptmp/dfs/data/current/BP-384051061-172.16.11.207-1561434420420/current/finalized
+刚开始是么有文件的
+
+2. 上传文件: ./hadoop fs -put /tmp/software/jdk-8u211-linux-x64.tar.gz /
+最后那个"空格"+/ 不可少
+
+3. 再次查看3个dn节点,都有了数据
+
+下载文件:./software/hadoop-2.7.7/bin/hadoop fs -get /jdk*
+其中最后的"jdk*"是模糊文件名
+
+
+bi是namenode的服务节点名
+查看HDFS目录:
+./software/hadoop-2.7.7/bin/hadoop fs -ls hdfs://bi/
+循环遍历全部路径
+./software/hadoop-2.7.7/bin/hadoop fs -ls -R  hdfs://bi/
+
+
+创建mi目录
+./software/hadoop-2.7.7/bin/hadoop fs -mkdir hdfs://bi/mi
+
+
+创建目录失败, 权限不够:
+./software/hadoop-2.7.7/bin/hadoop fs -chmod 777  hdfs://bi/
+
+从远程Hadoop下载文件到本地, 大坑:
+HADOOP_HOME and hadoop.home.dir are unset
+https://blog.csdn.net/darkdragonking/article/details/72636917
+
+
+读取非自己写入的可能会报错:
+java.io.StreamCorruptedException: invalid stream header: 0A026269
+可以自定义序列化,MyZkSerializer 
+https://blog.csdn.net/t_null/article/details/78474786
+https://blog.csdn.net/zwt0909/article/details/51737750
+
+
+
+
+
+按照Spark遇到坑:
+配置完毕后, 启动(spark集群)start-all.sh  
+报错:Permission denied -- 这可以不用管
+比如集群分布机器:201, 202, 203, 204
+先从一台:
+sbin/start-all.sh
+sbin/start-master.sh
+在从另外一台:
+sbin/start-all.sh
+
+然后检查其他每一台:jps 确保有2个进程都已启动:Worker/Master
+一般,其他机器可能没用启动Master, 在这些机器中重新执行start-master.sh
+
+如果出现一种情况:选主Master节点上2个进程都有, 但是http://172.16.11.204:8080/页面上没用对应的worker节点, 需要先关掉本节点的进程, 重新启动.
+一个是start-master.sh，用来启动master；
+还有一个是start-slave.sh spark://mini04:7077 ，用来启动worker(其中mini04是选主的master节点)
+
+
+sc.textFile("hdfs://bi/tpp/black.tx").flatMap(_.split(",")).map((_,1)).reduceByKey(_+_).saveAsTextFile("/tmp/out")
+
+
+
+
