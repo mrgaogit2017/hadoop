@@ -30,6 +30,7 @@ public class LauncherApp11 {
                 .setConf("spark.executor.memory", "1g")
                 .setConf("spark.executor.instances", "32")
                 .setConf("spark.executor.cores", "3")
+                //配置其默认分区个数, 尽可能是得分区的个数等于集群核心数目, 默认为分配cpu核数
                 .setConf("spark.default.parallelism", "10")*/
                 .setConf("spark.driver.allowMultipleContexts","true")
                 .setVerbose(true);

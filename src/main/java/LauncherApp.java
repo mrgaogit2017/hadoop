@@ -30,9 +30,12 @@ public class LauncherApp {
                 .setAppName("Test Java-Spark By SparkLauncher")
                 .setSparkHome("/apps/dev/spark-2.4.3-bin-hadoop2.7")
                 // 需要单独另外一个计算jar 也可以写HDFS路径的jar
-                .setAppResource("/apps/jars/spk-jar-1.0-SNAPSHOT.jar")
+                .setAppResource("/apps/jars/spk-jar-1.0-sql.jar")
+                //.setAppResource("/apps/jars/spk-jar-1.0-SNAPSHOT.jar")
                 // 计算jar的主类
-                .setMainClass("SparkDemo").addAppArgs(new String[]{input, outPutPath})
+                .setMainClass("JavaSparkSql")
+                //.setMainClass("SparkDemo")
+                .addAppArgs(new String[]{input, outPutPath})
                 //spark://mini02:7077
                 .setMaster("yarn")
                 .setDeployMode("cluster")
